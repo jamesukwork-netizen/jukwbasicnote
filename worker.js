@@ -697,10 +697,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     <path d="M3 13V3.5C3 2.67157 3.67157 2 4.5 2H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                   </svg>
                 </button>
-                <button class="share-btn" title="Search on Google AI">
+                <button class="share-btn google-btn" title="Search on Google AI (Gemini)">
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M9 3V9L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M3.5 14L9 9.5L14.5 14M9 3V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button class="share-btn chatgpt-btn" title="Search on ChatGPT">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="6" cy="9" r="1.5" fill="currentColor"/>
+                    <circle cx="9" cy="9" r="1.5" fill="currentColor"/>
+                    <circle cx="12" cy="9" r="1.5" fill="currentColor"/>
+                  </svg>
+                </button>
+                <button class="share-btn grok-btn" title="Search on Grok">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M5 9.5C5 8.5 6 8 9 8C12 8 13 8.5 13 9.5C13 10.5 12 11 9 11C6 11 5 10.5 5 9.5Z" fill="currentColor"/>
+                  </svg>
+                </button>
+                <button class="share-btn perplexity-btn" title="Search on Perplexity">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M9 5V9L11 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </button>
+                <button class="share-btn claude-btn" title="Search on Claude">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <rect x="3" y="4" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M7 8H11M7 11H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                   </svg>
                 </button>
                 <button class="delete-btn" title="Delete message">
@@ -732,10 +757,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       })
       
-      messageEl.querySelector('.share-btn').addEventListener('click', () => {
+      messageEl.querySelector('.google-btn').addEventListener('click', () => {
         const messageText = messageEl.querySelector('.message-text').textContent
         const encodedText = encodeURIComponent(messageText)
         window.open('https://gemini.google.com/app?q=' + encodedText, '_blank')
+      })
+      
+      messageEl.querySelector('.chatgpt-btn').addEventListener('click', () => {
+        const messageText = messageEl.querySelector('.message-text').textContent
+        const encodedText = encodeURIComponent(messageText)
+        window.open('https://chatgpt.com/?q=' + encodedText, '_blank')
+      })
+      
+      messageEl.querySelector('.grok-btn').addEventListener('click', () => {
+        const messageText = messageEl.querySelector('.message-text').textContent
+        const encodedText = encodeURIComponent(messageText)
+        window.open('https://grok.com/search?q=' + encodedText, '_blank')
+      })
+      
+      messageEl.querySelector('.perplexity-btn').addEventListener('click', () => {
+        const messageText = messageEl.querySelector('.message-text').textContent
+        const encodedText = encodeURIComponent(messageText)
+        window.open('https://www.perplexity.ai/search?q=' + encodedText, '_blank')
+      })
+      
+      messageEl.querySelector('.claude-btn').addEventListener('click', () => {
+        const messageText = messageEl.querySelector('.message-text').textContent
+        const encodedText = encodeURIComponent(messageText)
+        window.open('https://claude.ai/new?q=' + encodedText, '_blank')
       })
       
       messageEl.querySelector('.delete-btn').addEventListener('click', async () => {
