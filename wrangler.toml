@@ -4,4 +4,4 @@ compatibility_date = "2024-01-01"
 
 [[kv_namespaces]]
 binding = "MESSAGES_KV"
-id = "YOUR_KV_NAMESPACE_ID"  # Replace with actual KV namespace ID when deploying
+id = "b776d0acd95a4e3dab790d4173ddb425"

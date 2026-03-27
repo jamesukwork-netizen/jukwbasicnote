@@ -14,7 +14,6 @@ async function handleRequest(request) {
     return new Response(null, { headers: corsHeaders })
   }
 
-  // Serve static files
   if (url.pathname === '/' || url.pathname === '/index.html') {
     return new Response(INDEX_HTML, {
       headers: { 'Content-Type': 'text/html', ...corsHeaders },
@@ -29,7 +28,6 @@ async function handleRequest(request) {
     })
   }
 
-  // API routes
   if (url.pathname === '/api/messages') {
     if (request.method === 'GET') {
       return getMessages(corsHeaders)
@@ -41,25 +39,28 @@ async function handleRequest(request) {
     return deleteMessage(id, corsHeaders)
   }
 
-  // 404
   return new Response('Not Found', { status: 404, headers: corsHeaders })
 }
 
 async function getMessages(corsHeaders) {
   try {
-    // List all keys in the KV namespace
     const { keys } = await MESSAGES_KV.list()
     const messages = []
+    const now = Date.now()
+    const twelveHours = 12 * 60 * 60 * 1000
 
-    // Get each message
     for (const key of keys) {
       const value = await MESSAGES_KV.get(key.name)
       if (value) {
-        messages.push(JSON.parse(value))
+        const msg = JSON.parse(value)
+        if (now - msg.timestamp < twelveHours) {
+          messages.push(msg)
+        } else {
+          await MESSAGES_KV.delete(key.name)
+        }
       }
     }
 
-    // Sort by timestamp descending (newest first)
     messages.sort((a, b) => b.timestamp - a.timestamp)
 
     return new Response(JSON.stringify(messages), {
@@ -92,7 +93,6 @@ async function postMessage(request, corsHeaders) {
       timestamp,
     }
 
-    // Store with 12-hour expiration (in seconds)
     await MESSAGES_KV.put(id, JSON.stringify(messageObj), {
       expirationTtl: 12 * 60 * 60,
     })
@@ -121,9 +121,7 @@ async function deleteMessage(id, corsHeaders) {
   }
 }
 
-// Embedded static files
-const INDEX_HTML = `
-<!DOCTYPE html>
+const INDEX_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -132,201 +130,454 @@ const INDEX_HTML = `
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Chat Note</h1>
-      <p>Messages disappear after 12 hours</p>
+  <div class="app">
+    <header class="sidebar">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#10a37f"/>
+          <path d="M8 16C8 11.5817 11.5817 8 16 8V8C20.4183 8 24 11.5817 24 16V24H16C11.5817 24 8 20.4183 8 16V16Z" fill="white"/>
+        </svg>
+        <span>Chat Note</span>
+      </div>
+      <p class="subtitle">Messages auto-delete after 12 hours</p>
+      <button class="new-chat-btn" onclick="document.getElementById('message-input').focus()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2V14M2 8H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        New Message
+      </button>
     </header>
     
-    <main>
-      <form id="message-form">
-        <div class="form-group">
-          <input type="text" id="name-input" placeholder="Your name (optional)">
+    <main class="chat-area">
+      <div class="messages-container" id="messages-container">
+        <div class="welcome-message">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect width="48" height="48" rx="12" fill="#10a37f"/>
+            <path d="M12 24C12 17.3726 17.3726 12 24 12V12C30.6274 12 36 17.3726 36 24V36H24C17.3726 36 12 30.6274 12 24V24Z" fill="white"/>
+          </svg>
+          <h2>How can I help you today?</h2>
+          <p>Leave a message for anyone to see. Messages are visible to anyone with the URL and auto-delete after 12 hours.</p>
         </div>
-        <div class="form-group">
-          <textarea id="message-input" placeholder="Type your message here..." required></textarea>
-        </div>
-        <button type="submit">Send</button>
-      </form>
+        <div id="messages-list"></div>
+      </div>
       
-      <div id="messages-list" class="messages-list">
-        <!-- Messages will be inserted here -->
+      <div class="input-container">
+        <form id="message-form">
+          <div class="input-wrapper">
+            <input type="text" id="name-input" placeholder="Your name (optional)">
+            <textarea id="message-input" placeholder="Type your message..." rows="1" required></textarea>
+            <button type="submit" id="send-btn">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M18 2L9 11M18 2L12 18L9 11M18 2L2 8L9 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+        <p class="disclaimer">Messages auto-delete after 12 hours</p>
       </div>
     </main>
   </div>
   
   <script src="/script.js"></script>
 </body>
-</html>
-`
+</html>`
 
-const STYLE_CSS = `
-* {
+const STYLE_CSS = `* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+:root {
+  --bg-primary: #202123;
+  --bg-secondary: #2a2b32;
+  --bg-tertiary: #343541;
+  --bg-hover: #3e3f47;
+  --border-color: #3e3f47;
+  --text-primary: #ececf1;
+  --text-secondary: #acacbe;
+  --text-muted: #6e6e80;
+  --accent: #10a37f;
+  --accent-hover: #1a7f64;
+  --danger: #ef4444;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f7f7f8;
+    --bg-tertiary: #ffffff;
+    --border-color: #e5e5e5;
+    --text-primary: #343541;
+    --text-secondary: #5e5e6e;
+    --text-muted: #8e8ea0;
+  }
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
+  font-family: 'Söhne', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  background: var(--bg-secondary);
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.logo svg {
+  flex-shrink: 0;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 12px;
+  margin-bottom: 20px;
+}
+
+.new-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+}
+
+.new-chat-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-primary);
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 0;
+}
+
+.welcome-message {
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.welcome-message svg {
+  margin-bottom: 24px;
+}
+
+.welcome-message h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.welcome-message p {
+  color: var(--text-secondary);
+  font-size: 15px;
   line-height: 1.6;
 }
 
-.container {
-  max-width: 800px;
+#messages-list {
+  max-width: 768px;
   margin: 0 auto;
-  padding: 20px;
-}
-
-header {
-  text-align: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-header h1 {
-  color: #2c3e50;
-  margin-bottom: 10px;
-}
-
-header p {
-  color: #7f8c8d;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-input, textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-  transition: border-color 0.3s;
-}
-
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #3498db;
-}
-
-textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-button {
-  background-color: #3498db;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-button:hover {
-  background-color: #2980b9;
-}
-
-button:active {
-  transform: scale(0.98);
-}
-
-.messages-list {
-  margin-top: 30px;
+  padding: 0 16px;
 }
 
 .message {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 16px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.message:last-child {
+  border-bottom: none;
+}
+
+.message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.message-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .message-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
-.message-header .name {
+.message-name {
   font-weight: 600;
-  color: #2c3e50;
+  font-size: 15px;
+  color: var(--text-primary);
 }
 
-.message-header .timestamp {
-  font-size: 0.9em;
-  color: #95a5a6;
+.message-time {
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
-.message-header .actions {
+.message-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  margin-left: auto;
 }
 
-.message-body {
-  margin: 10px 0;
-  line-height: 1.5;
-}
-
-.copy-icon, .delete-icon {
-  width: 20px;
-  height: 20px;
+.message-actions button {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  color: var(--text-muted);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.copy-icon:hover, .delete-icon:hover {
+.message-actions button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.message-actions button.delete-btn:hover {
+  color: var(--danger);
+}
+
+.message-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.input-container {
+  padding: 16px 24px 24px;
+  background: var(--bg-primary);
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+#message-form {
+  width: 100%;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 16px;
+  transition: border-color 0.2s;
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--accent);
+}
+
+#name-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+#name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#name-input::placeholder {
+  color: var(--text-muted);
+}
+
+#message-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  color: var(--text-primary);
+  resize: none;
+  max-height: 200px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+#message-input:focus {
+  outline: none;
+}
+
+#message-input::placeholder {
+  color: var(--text-muted);
+}
+
+#send-btn {
+  background: var(--accent);
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#send-btn:hover {
+  background: var(--accent-hover);
+}
+
+#send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.disclaimer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1000;
+}
+
+.toast.show {
   opacity: 1;
 }
 
-.copy-icon {
-  filter: invert(35%) sepia(62%) saturate(1402%) hue-rotate(194deg) brightness(95%) contrast(89%);
-}
-
-.delete-icon {
-  filter: invert(54%) sepia(72%) saturate(2505%) hue-rotate(341deg) brightness(91%) contrast(89%);
-}
-
-@media (max-width: 600px) {
-  .container {
-    padding: 15px;
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
   }
   
-  .message-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+  .input-container {
+    padding: 12px 16px 16px;
   }
   
-  .message-header .actions {
-    align-self: flex-end;
+  .message {
+    gap: 12px;
+    padding: 16px 0;
   }
-}
-`
+  
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  .welcome-message {
+    padding: 40px 16px;
+  }
+  
+  .welcome-message h2 {
+    font-size: 20px;
+  }
+}`
 
-const SCRIPT_JS = `
+const SCRIPT_JS = `let autoRefreshInterval;
+
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('message-form')
   const nameInput = document.getElementById('name-input')
   const messageInput = document.getElementById('message-input')
   const messagesList = document.getElementById('messages-list')
+  const messagesContainer = document.getElementById('messages-container')
+  const sendBtn = document.getElementById('send-btn')
 
-  // Load messages on start
   loadMessages()
+  autoRefreshInterval = setInterval(loadMessages, 30000)
 
-  // Handle form submission
+  messageInput.addEventListener('input', function() {
+    this.style.height = 'auto'
+    this.style.height = Math.min(this.scrollHeight, 200) + 'px'
+  })
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     
@@ -334,35 +585,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const message = messageInput.value.trim()
     
     if (!message) {
-      alert('Please enter a message')
+      showToast('Please enter a message')
       return
     }
+    
+    sendBtn.disabled = true
     
     try {
       const response = await fetch('/api/messages', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, message }),
       })
       
       if (response.ok) {
-        // Clear form
         messageInput.value = ''
-        nameInput.value = ''
-        // Reload messages
+        messageInput.style.height = 'auto'
         loadMessages()
       } else {
         const error = await response.json()
-        alert(error.error || 'Failed to send message')
+        showToast(error.error || 'Failed to send message')
       }
     } catch (error) {
-      alert('Network error. Please try again.')
+      showToast('Network error. Please try again.')
+    } finally {
+      sendBtn.disabled = false
     }
   })
 
-  // Load messages from API
   async function loadMessages() {
     try {
       const response = await fetch('/api/messages')
@@ -372,79 +622,101 @@ document.addEventListener('DOMContentLoaded', () => {
       renderMessages(messages)
     } catch (error) {
       console.error('Error loading messages:', error)
-      messagesList.innerHTML = '<p class="error">Failed to load messages. Please try again later.</p>'
     }
   }
 
-  // Render messages list
   function renderMessages(messages) {
+    const welcomeMsg = messagesContainer.querySelector('.welcome-message')
+    
     if (messages.length === 0) {
-      messagesList.innerHTML = '<p class="empty">No messages yet. Be the first to leave one!</p>'
+      messagesList.innerHTML = ''
+      if (!welcomeMsg) {
+        messagesContainer.innerHTML = \`
+          <div class="welcome-message">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx="12" fill="#10a37f"/>
+              <path d="M12 24C12 17.3726 17.3726 12 24 12V12C30.6274 12 36 17.3726 36 24V36H24C17.3726 36 12 30.6274 12 24V24Z" fill="white"/>
+            </svg>
+            <h2>No messages yet</h2>
+            <p>Be the first to leave a message!</p>
+          </div>
+          <div id="messages-list"></div>
+        \`
+      }
       return
     }
-    
+
+    if (welcomeMsg) {
+      welcomeMsg.remove()
+    }
+
     let html = ''
     for (const message of messages) {
-      html += '<div class="message" data-id="' + message.id + '">'
-      html += '  <div class="message-header">'
-      html += '    <span class="name">' + escapeHtml(message.name) + '</span>'
-      html += '    <span class="timestamp">' + formatTimestamp(message.timestamp) + '</span>'
-      html += '    <div class="actions">'
-      html += '      <img class="copy-icon" src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Crect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'%3E%3C/rect%3E%3Cpath d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'%3E%3C/path%3E%3C/svg%3E" alt="Copy">'
-      html += '      <img class="delete-icon" src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M3 6h18\'%3E%3C/path%3E%3Cpath d=\'M19 9v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9\'%3E%3C/path%3E%3Cpath d=\'M10 11V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5\'%3E%3C/path%3E%3C/svg%3E" alt="Delete">'
-      html += '    </div>'
-      html += '  </div>'
-      html += '  <div class="message-body">' + escapeHtml(message.message) + '</div>'
-      html += '</div>'
+      const avatarLetter = message.name.charAt(0).toUpperCase()
+      html += \`
+        <div class="message" data-id="\${message.id}">
+          <div class="message-avatar">\${avatarLetter}</div>
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-name">\${escapeHtml(message.name)}</span>
+              <span class="message-time">\${formatTimestamp(message.timestamp)}</span>
+              <div class="message-actions">
+                <button class="copy-btn" title="Copy message">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M3 13V3.5C3 2.67157 3.67157 2 4.5 2H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </button>
+                <button class="delete-btn" title="Delete message">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M3 5H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M7 5V3.5C7 2.67157 7.67157 2 8.5 2H9.5C10.3284 2 11 2.67157 11 3.5V5" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M14 5V14.5C14 15.3284 13.3284 16 12.5 16H5.5C4.67157 16 4 15.3284 4 14.5V5" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="message-text">\${escapeHtml(message.message)}</div>
+          </div>
+        </div>
+      \`
     }
     messagesList.innerHTML = html
     
-    // Add event listeners to new elements
     document.querySelectorAll('.message').forEach(messageEl => {
       const id = messageEl.dataset.id
       
-      // Copy button
-      messageEl.querySelector('.copy-icon').addEventListener('click', async () => {
-        const messageText = messageEl.querySelector('.message-body').textContent
+      messageEl.querySelector('.copy-btn').addEventListener('click', async () => {
+        const messageText = messageEl.querySelector('.message-text').textContent
         try {
           await navigator.clipboard.writeText(messageText)
-          // Show feedback
-          const icon = messageEl.querySelector('.copy-icon')
-          icon.style.opacity = '0.3'
-          setTimeout(() => {
-            icon.style.opacity = '0.7'
-          }, 500)
+          showToast('Copied to clipboard')
         } catch (err) {
-          alert('Failed to copy to clipboard')
+          showToast('Failed to copy')
         }
       })
       
-      // Delete button
-      messageEl.querySelector('.delete-icon').addEventListener('click', async () => {
-        if (!confirm('Are you sure you want to delete this message?')) return
+      messageEl.querySelector('.delete-btn').addEventListener('click', async () => {
+        if (!confirm('Delete this message?')) return
         
         try {
-          const response = await fetch('/api/messages/' + id, {
-            method: 'DELETE',
-          })
+          const response = await fetch('/api/messages/' + id, { method: 'DELETE' })
           
           if (response.ok) {
             messageEl.remove()
-            // If no messages left, show empty state
             if (messagesList.children.length === 0) {
-              messagesList.innerHTML = '<p class="empty">No messages yet. Be the first to leave one!</p>'
+              loadMessages()
             }
           } else {
-            alert('Failed to delete message')
+            showToast('Failed to delete message')
           }
         } catch (error) {
-          alert('Network error. Please try again.')
+          showToast('Network error')
         }
       })
     })
   }
 
-  // Helper functions
   function escapeHtml(text) {
     const div = document.createElement('div')
     div.textContent = text
@@ -453,13 +725,30 @@ document.addEventListener('DOMContentLoaded', () => {
   
   function formatTimestamp(timestamp) {
     const date = new Date(timestamp)
-    return date.toLocaleString(undefined, {
-      year: 'numeric',
+    const now = new Date()
+    const diff = now - date
+    
+    if (diff < 60000) return 'Just now'
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago'
+    
+    return date.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     })
   }
-})
-`
+
+  function showToast(message) {
+    let toast = document.querySelector('.toast')
+    if (!toast) {
+      toast = document.createElement('div')
+      toast.className = 'toast'
+      document.body.appendChild(toast)
+    }
+    toast.textContent = message
+    toast.classList.add('show')
+    setTimeout(() => toast.classList.remove('show'), 2500)
+  }
+})`
