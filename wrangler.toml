@@ -1,0 +1,7 @@
+name = "jukwbasicnote"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "MESSAGES_KV"
+id = "YOUR_KV_NAMESPACE_ID"  # Replace with actual KV namespace ID when deploying

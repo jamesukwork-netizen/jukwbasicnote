@@ -1,0 +1,17 @@
+{
+  "name": "jukwbasicnote",
+  "version": "1.0.0",
+  "description": "A simple chat note with auto-deleting messages after 12 hours",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["chat", "note", "cloudflare", "worker"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
