@@ -697,6 +697,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <path d="M3 13V3.5C3 2.67157 3.67157 2 4.5 2H12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                   </svg>
                 </button>
+                <button class="share-btn" title="Search on Google AI">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M9 3V9L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </button>
                 <button class="delete-btn" title="Delete message">
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <path d="M3 5H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -724,6 +730,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
           showToast('Failed to copy')
         }
+      })
+      
+      messageEl.querySelector('.share-btn').addEventListener('click', () => {
+        const messageText = messageEl.querySelector('.message-text').textContent
+        const encodedText = encodeURIComponent(messageText)
+        window.open('https://gemini.google.com/app?q=' + encodedText, '_blank')
       })
       
       messageEl.querySelector('.delete-btn').addEventListener('click', async () => {
