@@ -291,7 +291,7 @@ body {
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 0;
+  padding: 20px 16px 140px;
 }
 
 .welcome-message {
@@ -410,11 +410,24 @@ body {
 }
 
 .input-container {
-  padding: 16px 24px 24px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 24px 20px;
   background: var(--bg-primary);
-  max-width: 800px;
+  max-width: 100%;
   width: 100%;
-  margin: 0 auto;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-primary);
+  padding-bottom: 120px;
 }
 
 #message-form {
@@ -500,9 +513,10 @@ body {
 
 .disclaimer {
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
-  margin-top: 12px;
+  margin-top: 8px;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .empty-state {
@@ -537,7 +551,23 @@ body {
   }
   
   .input-container {
-    padding: 12px 16px 16px;
+    padding: 12px 12px 16px;
+  }
+  
+  .input-wrapper {
+    padding: 14px 14px;
+    flex-wrap: wrap;
+  }
+  
+  #name-input {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  #message-input {
+    flex: none;
+    width: calc(100% - 44px);
+    min-height: 44px;
   }
   
   .message {
