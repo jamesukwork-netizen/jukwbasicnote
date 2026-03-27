@@ -383,19 +383,21 @@ document.addEventListener('DOMContentLoaded', () => {
       return
     }
     
-    messagesList.innerHTML = messages.map(message => `
-      <div class="message" data-id="${message.id}">
-        <div class="message-header">
-          <span class="name">${escapeHtml(message.name)}</span>
-          <span class="timestamp">${formatTimestamp(message.timestamp)}</span>
-          <div class="actions">
-            <img class="copy-icon" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'%3E%3C/rect%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'%3E%3C/path%3E%3C/svg%3E" alt="Copy">
-            <img class="delete-icon" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18'%3E%3C/path%3E%3Cpath d='M19 9v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9'%3E%3C/path%3E%3Cpath d='M10 11V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5'%3E%3C/path%3E%3C/svg%3E" alt="Delete">
-          </div>
-        </div>
-        <div class="message-body">${escapeHtml(message.message)}</div>
-      </div>
-    `).join('')
+    let html = ''
+    for (const message of messages) {
+      html += '<div class="message" data-id="' + message.id + '">'
+      html += '  <div class="message-header">'
+      html += '    <span class="name">' + escapeHtml(message.name) + '</span>'
+      html += '    <span class="timestamp">' + formatTimestamp(message.timestamp) + '</span>'
+      html += '    <div class="actions">'
+      html += '      <img class="copy-icon" src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Crect x=\'9\' y=\'9\' width=\'13\' height=\'13\' rx=\'2\' ry=\'2\'%3E%3C/rect%3E%3Cpath d=\'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\'%3E%3C/path%3E%3C/svg%3E" alt="Copy">'
+      html += '      <img class="delete-icon" src="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M3 6h18\'%3E%3C/path%3E%3Cpath d=\'M19 9v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9\'%3E%3C/path%3E%3Cpath d=\'M10 11V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5\'%3E%3C/path%3E%3C/svg%3E" alt="Delete">'
+      html += '    </div>'
+      html += '  </div>'
+      html += '  <div class="message-body">' + escapeHtml(message.message) + '</div>'
+      html += '</div>'
+    }
+    messagesList.innerHTML = html
     
     // Add event listeners to new elements
     document.querySelectorAll('.message').forEach(messageEl => {
@@ -422,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('Are you sure you want to delete this message?')) return
         
         try {
-          const response = await fetch(`/api/messages/${id}`, {
+          const response = await fetch('/api/messages/' + id, {
             method: 'DELETE',
           })
           
