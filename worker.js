@@ -728,13 +728,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <path d="M7 8H11M7 11H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                   </svg>
                 </button>
-                <button class="share-btn calendar-btn" title="Extract to-do and create Google Calendar links">
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                    <rect x="2" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M2 8H16" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M6 2V4M12 2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                  </svg>
-                </button>
                 <button class="delete-btn" title="Delete message">
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <path d="M3 5H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -792,13 +785,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageText = messageEl.querySelector('.message-text').textContent
         const encodedText = encodeURIComponent(messageText)
         window.open('https://claude.ai/new?q=' + encodedText, '_blank')
-      })
-      
-      messageEl.querySelector('.calendar-btn').addEventListener('click', () => {
-        const messageText = messageEl.querySelector('.message-text').textContent
-        const prompt = 'Please extract all to-do items from the following natural language text and organize them into a clear Markdown table.\nTable Format (please let user to copy the table easily):\n| Date | Time | Task Title | Google Calendar Link |\nGoogle Calendar Link Requirements:\nFor each task, generate a direct \'Create Event\' URL for Google Calendar.\nFormat: https://calendar.google.com/calendar/render?action=TEMPLATE&text=[Task_Title]&dates=[YYYYMMDD]T[HHMMSS]/[YYYYMMDD]T[HHMMSS]\nRules:\n\t1\tUse the local date and time extracted from the text.\n\t2\tDo NOT append \'Z\' or a specific timezone; let Google Calendar handle it based on the user\'s default settings.\n\t3\tIf no end time is specified, set it to 1 hour after the start time.\n\t4\tEnsure the date/time format is strictly YYYYMMDDTHHMMSS.\n\nText content:\n' + messageText
-        const encodedText = encodeURIComponent(prompt)
-        window.open('https://chatgpt.com/?q=' + encodedText, '_blank')
       })
       
       messageEl.querySelector('.delete-btn').addEventListener('click', async () => {
