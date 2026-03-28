@@ -1,0 +1,21 @@
+{
+  "name": "Chat Note",
+  "short_name": "ChatNote",
+  "description": "Temporary chat messages that auto-delete after 12 hours",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#202123",
+  "theme_color": "#10a37f",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='48' fill='%2310a37f'/><path d='M48 96C48 69.49 69.49 48 96 48V48C122.51 48 144 69.49 144 96V144H96C69.49 144 48 122.51 48 96V96Z' fill='white'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%2310a37f'/><path d='M128 256C128 184.95 184.95 128 256 128V128C327.05 128 384 184.95 384 256V384H256C184.95 384 128 327.05 128 256V256Z' fill='white'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

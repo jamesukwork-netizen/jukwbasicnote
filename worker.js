@@ -26,6 +26,14 @@ async function handleRequest(request) {
     return new Response(SCRIPT_JS, {
       headers: { 'Content-Type': 'application/javascript', ...corsHeaders },
     })
+  } else if (url.pathname === '/manifest.json') {
+    return new Response(MANIFEST_JSON, {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    })
+  } else if (url.pathname === '/sw.js') {
+    return new Response(SW_JS, {
+      headers: { 'Content-Type': 'application/javascript', ...corsHeaders },
+    })
   }
 
   if (url.pathname === '/api/messages') {
@@ -126,10 +134,15 @@ const INDEX_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10a37f">
+  <meta name="description" content="Temporary chat messages that auto-delete after 12 hours">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='48' fill='%2310a37f'/><path d='M48 96C48 69.49 69.49 48 96 48V48C122.51 48 144 69.49 144 96V144H96C69.49 144 48 122.51 48 96V96Z' fill='white'/></svg>">
   <title>Chat Note</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <div id="install-btn-container"></div>
   <div class="app">
     <header class="sidebar">
       <div class="logo">
@@ -545,6 +558,36 @@ body {
   opacity: 1;
 }
 
+#install-btn-container {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 999;
+}
+
+.install-pwa-btn {
+  display: none;
+  background: var(--accent);
+  border: none;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.install-pwa-btn:hover {
+  transform: scale(1.1);
+  background: var(--accent-hover);
+}
+
+.install-pwa-btn.visible {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     display: none;
@@ -590,9 +633,91 @@ body {
   }
 }`
 
+const MANIFEST_JSON = JSON.stringify({
+  name: "Chat Note",
+  short_name: "ChatNote",
+  description: "Temporary chat messages that auto-delete after 12 hours",
+  start_url: "/",
+  display: "standalone",
+  background_color: "#202123",
+  theme_color: "#10a37f",
+  icons: [
+    {
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='48' fill='%2310a37f'/%3E%3Cpath d='M48 96C48 69.49 69.49 48 96 48V48C122.51 48 144 69.49 144 96V144H96C69.49 144 48 122.51 48 96V96Z' fill='white'/%3E%3C/svg%3E",
+      sizes: "192x192",
+      type: "image/svg+xml"
+    },
+    {
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%2310a37f'/%3E%3Cpath d='M128 256C128 184.95 184.95 128 256 128V128C327.05 128 384 184.95 384 256V384H256C184.95 384 128 327.05 128 256V256Z' fill='white'/%3E%3C/svg%3E",
+      sizes: "512x512",
+      type: "image/svg+xml"
+    }
+  ]
+}, null, 2)
+
+const SW_JS = `const CACHE_NAME = 'chatnote-v1';
+const urlsToCache = ['/', '/index.html', '/style.css', '/script.js', '/manifest.json'];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(cacheNames.map(cacheName => {
+        if (cacheName !== CACHE_NAME) {
+          return caches.delete(cacheName);
+        }
+      }));
+    })
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => response || fetch(event.request))
+  );
+});
+`
+
 const SCRIPT_JS = `let autoRefreshInterval;
 
 document.addEventListener('DOMContentLoaded', () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err))
+  }
+
+  let deferredPrompt
+  const installBtnContainer = document.getElementById('install-btn-container')
+  const installBtn = document.createElement('button')
+  installBtn.className = 'install-pwa-btn'
+  installBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4V16M12 16L8 12M12 16L16 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 20H16" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>'
+  installBtn.title = 'Install App'
+  installBtnContainer.appendChild(installBtn)
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    deferredPrompt = e
+    installBtn.classList.add('visible')
+  })
+
+  installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    deferredPrompt = null
+    installBtn.classList.remove('visible')
+  })
+
+  window.addEventListener('appinstalled', () => {
+    installBtn.classList.remove('visible')
+  })
+
   const form = document.getElementById('message-form')
   const nameInput = document.getElementById('name-input')
   const messageInput = document.getElementById('message-input')
