@@ -728,6 +728,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <path d="M7 8H11M7 11H9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                   </svg>
                 </button>
+                <button class="share-btn calendar-btn" title="Extract to-do and create Google Calendar links">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <rect x="2" y="4" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M2 8H16" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M6 2V4M12 2V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </button>
                 <button class="delete-btn" title="Delete message">
                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                     <path d="M3 5H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -785,6 +792,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageText = messageEl.querySelector('.message-text').textContent
         const encodedText = encodeURIComponent(messageText)
         window.open('https://claude.ai/new?q=' + encodedText, '_blank')
+      })
+      
+      messageEl.querySelector('.calendar-btn').addEventListener('click', () => {
+        const messageText = messageEl.querySelector('.message-text').textContent
+        var prompt = 'Please extract all to-do items from the following natural language text and organize them into a clear Markdown table.'
+        prompt += String.fromCharCode(10) + 'Table Format (please let user to copy the table easily):'
+        prompt += String.fromCharCode(10) + '| Date | Time | Task Title | Google Calendar Link |'
+        prompt += String.fromCharCode(10) + 'Google Calendar Link Requirements:'
+        prompt += String.fromCharCode(10) + 'For each task, generate a direct Create Event URL for Google Calendar.'
+        prompt += String.fromCharCode(10) + 'Format: https://calendar.google.com/calendar/render?action=TEMPLATE&text=[Task_Title]&dates=[YYYYMMDD]T[HHMMSS]/[YYYYMMDD]T[HHMMSS]'
+        prompt += String.fromCharCode(10) + 'Rules:'
+        prompt += String.fromCharCode(10) + String.fromCharCode(9) + '1' + String.fromCharCode(9) + 'Use the local date and time extracted from the text.'
+        prompt += String.fromCharCode(10) + String.fromCharCode(9) + '2' + String.fromCharCode(9) + 'Do NOT append Z or a specific timezone; let Google Calendar handle it based on the user default settings.'
+        prompt += String.fromCharCode(10) + String.fromCharCode(9) + '3' + String.fromCharCode(9) + 'If no end time is specified, set it to 1 hour after the start time.'
+        prompt += String.fromCharCode(10) + String.fromCharCode(9) + '4' + String.fromCharCode(9) + 'Ensure the date/time format is strictly YYYYMMDDTHHMMSS.'
+        prompt += String.fromCharCode(10) + String.fromCharCode(10) + 'Text content:'
+        prompt += String.fromCharCode(10) + messageText
+        const encodedText = encodeURIComponent(prompt)
+        window.open('https://chatgpt.com/?q=' + encodedText, '_blank')
       })
       
       messageEl.querySelector('.delete-btn').addEventListener('click', async () => {
